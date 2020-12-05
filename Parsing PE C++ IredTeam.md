@@ -37,17 +37,17 @@ First off, we need to define some terms:
 
 ## Calculating Offsets
 If we look at the notepad.exe binary using CFF Explorer (or any other similar program) and inspect the `Data Directories` from under the `Optional Header` , we can see that the Import Table is located at RVA `0x0000A0A0` that according to CFF Explorer happens to live in the `.text` section:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQer5Fo7mTORvKDA7BK%2FScreenshot%20from%202018-11-06%2020-51-04.png?alt=media&token=96d64a21-eda2-4343-802a-8363abf1f931)
 
 Indeed, if we look at the `Section Headers` and note the values `Virtual Size` and `Virtual Address` for the `.text` section:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQetncA4kzvngtz2Xr1%2FScreenshot%20from%202018-11-06%2020-51-27.png?alt=media&token=6b8b46ee-31ff-4c44-9a56-45ad4e414bd3)
 
 and check if the `Import Directory RVA` of `0x0000A0A0` falls into the range of `.text` section with this conditional statement in python:
 ```python
 0x000a0a0 > 0x00001000 and 0x000a0a0 < 0x00001000 + 0x0000a6fc
 ```
 ...we can confirm it definitely does fall into the .text section's range:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQev-Y7ZG3Go8v4OBT0%2FScreenshot%20from%202018-11-06%2021-26-56.png?alt=media&token=60c6cbd7-7b4a-4b88-a5fb-c8235239d35a)
 
 ### PIMAGE_IMPORT_DESCRIPTOR
 In order to read out DLL names that this binary imports, we first need to populate a data structure called `PIMAGE_IMPORT_DESCRIPTOR` with revlevant data from the binary, but how do we find it?
@@ -84,16 +84,16 @@ PS C:\Users\mantvydas> [System.Convert]::ToString($importDescriptor, 16)
 94a0
 ```
 If we check the file offset 0x95cc, we can see we are getting close to a list of imported DLL names - note that at we can see the VERSION.dll starting to show - that is a good start:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQf3mYuT4C96ts53KXu%2FScreenshot%20from%202018-11-06%2022-08-49.png?alt=media&token=c432b3cb-eee4-4605-80a9-2bf33c1a64ed)
 
 Now more importantly, note the value highlighted at offset `0x000094ac` - `7C A2 00 00` (reads A2 7C due to little indianness) - this is important. If we consider the layout of the `PIMAGE_IMPORT_DESCRIPTOR` structure, we can see that the fourth member of the structure (each member is a DWORD, so 4 bytes in size) is `DWORD Name`, which implies that `0x000094ac` contains something that should be useful for us to get our first imported DLL's name:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQf4RFW7sJ7ZPT4fh4x%2FScreenshot%20from%202018-11-06%2022-12-26.png?alt=media&token=4bb9c822-d54a-4662-b44f-677b1d9b50f0)
 
 Indeed, if we check the Import Directory of notepad.exe in CFF Explorer, we see that the 0xA27C is another RVA to the DLL name, which happens to be ADVAPI32.dll - and we will manually verify this in a moment:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQf7wZIZsthWxn4dIrl%2FScreenshot%20from%202018-11-06%2022-27-43.png?alt=media&token=8ac5eb4d-0e69-4f6a-855c-88a69398d3a8)
 
 If we look closer at the ADVAPI32.dll import details and compare it with the hex dump of the binary at 0x94A0, we can see that the 0000a27c is surrounded by the same info we saw in CFF Explorer for the ADVAPI32.dll:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfBWDpwbL02hABtdXP%2FScreenshot%20from%202018-11-06%2022-43-11.png?alt=media&token=53fec064-e9ee-426c-a761-8e8a3d1662e2)
 
 ### First DLL Name
 Let's see if we can translate this Name RVA 0xA27c to the file offset using the technique we used earlier and finally get the first imported DLL name. 
@@ -114,18 +114,18 @@ $firstDLLname = $rawOffsetToTextSection + ($nameRVA - $textVA)
 [System.Convert]::ToString($firstDLLname, 16)
 967c
 ```
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQf9GIqHCxMRxa-2W06%2FScreenshot%20from%202018-11-06%2022-33-24.png?alt=media&token=fbb75558-d2b4-4141-8fa1-15f2eea9359a)
 If we check offset `0x967c` in our hex editor - success, we found our first DLL name:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQemCSvqXlu-oz7Y8dL%2F-LQf9YVRnlMFJHV-FIuK%2FScreenshot%20from%202018-11-06%2022-34-51.png?alt=media&token=684a8fea-7972-489c-b851-fdf52d3114ce)
 
 ### DLL Imported Functions
 Now in order to get a list of imported functions from the given DLL, we need to use a structure called `PIMAGE_THUNK_DATA32` which looks like this:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfDHFuNfPRxPLo2zAi%2FScreenshot%20from%202018-11-06%2022-51-11.png?alt=media&token=62b91e76-9bd1-4700-8147-a59218923647)
 
 In order to utilise the above structure, again, we need to translate an RVA of the `OriginalFirstThunk` member of the structure `PIMAGE_IMPORT_DESCRIPTOR` which in our case was pointing to `0x0000A28C`:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfECzgbEcn6d0c2rn6%2FScreenshot%20from%202018-11-06%2022-55-16.png?alt=media&token=3d043df7-d479-42fe-aeb3-b203b8baa1ce)
 
 If we use the same formula for calculating RVAs as previously and use the below Powershell to calculate the file offset, we get:
-![Image]();
 
 ```powershell
 # first thunk
@@ -133,13 +133,12 @@ $firstThunk = $rawOffsetToTextSection + (0x0000A28C - $textVA)
 [System.Convert]::ToString($firstThunk, 16)
 968c
 ```
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfF6LOWr8uzUtTYvMI%2FScreenshot%20from%202018-11-06%2022-59-13.png?alt=media&token=0caede85-111a-4fcb-bf0a-ccb0f9a044a3)
 
 At that offset 968c+4 (+4 because per PIMAGE_THUNK_DATA32 structure layout, the second member is called Function and this is the member we are interested in), we see a couple more values that look like RVAs - 0x0000a690 and 0x0000a6a2:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfG9FtT4bjBLz8hxIE%2FScreenshot%20from%202018-11-06%2023-03-44.png?alt=media&token=3bea8df4-aa93-4497-a6c4-0a9aef582bd4)
 
 If we do a final RVA to file offset conversion for the second (we could do the same for 0x0000a690) RVA 0x0000a6a2:
-![Image]();
 
 ```powershell
 $firstFunction = $rawOffsetToTextSection + (0x0000A6A2 - $textVA)
@@ -148,10 +147,10 @@ $firstFunction = $rawOffsetToTextSection + (0x0000A6A2 - $textVA)
 ```
 Finally, with the file offset 0x9aa2, we get to see a second (because we chose the offset a6a2 rather than a690) imported function for the DLL ADVAPI32.
 Note that the function name actually starts 2 bytes further into the file, so the file offset 9aa2 becomes 9aa2 + 2 = 9aa4 - currently I'm not sure what the reason for this is:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfIW9YaI7uTEJWP5h8%2FScreenshot%20from%202018-11-06%2023-14-05.png?alt=media&token=cf2c7e41-d8c0-4f57-9edf-8108e4a68f39);
 
 Cross checking the above findings with CFF Explorer's Imported DLLs parser, we can see that our calculations were correct - note the OFTs column and the values a6a2 and a690 we referred to earlier:
-![Image]();
+![Image](https://gblobscdn.gitbook.com/assets%2F-LFEMnER3fywgFHoroYn%2F-LQf9qJ2ptCMkiy0HB3S%2F-LQfJp8UuOk-DpQbpni-%2FScreenshot%20from%202018-11-06%2023-19-37.png?alt=media&token=ae69355d-0324-44b5-bc3a-02a45de4244d);
 
 ## Code
 The below code shows how to loop through the file in its entirety to parse all the DLLs and all of their imported functions.
