@@ -1,5 +1,5 @@
-include irvine32.inc
-include macros.inc
+include C:\Irvine\Irvine32.inc
+include C:\Irvine\Macros.inc
 
 .data
 pathFile	byte	"FileTracker32.dll",1000 dup(0)

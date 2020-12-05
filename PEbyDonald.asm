@@ -1,4 +1,4 @@
-INCLUDE \masm32\include\masm32rt.inc
+INCLUDE C:\masm32\include\masm32rt.inc
 ;--------------------------------------------------------------------------------
 .DATA
 	dosHeader              IMAGE_DOS_HEADER <>
